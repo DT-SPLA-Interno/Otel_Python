@@ -1,0 +1,139 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pocotelpython
+---
+# ---------------------------------------------------------------------------
+# DEPLOYMENT: user_interface
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-interface
+  namespace: pocotelpython
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-interface
+  template:
+    metadata:
+      labels:
+        app: user-interface
+    spec:
+      containers:
+      - name: user-interface
+        image: user-interface:latest
+        ports:
+        - containerPort: 8000
+        # Si se desea especificar variables de entorno, se agregan aquí
+        # env:
+        # - name: KEY
+        #   value: "value"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-interface
+  namespace: pocotelpython
+spec:
+  type: LoadBalancer
+  selector:
+    app: user-interface
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+
+---
+# ---------------------------------------------------------------------------
+# DEPLOYMENT: api_inventario
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-inventario
+  namespace: pocotelpython
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-inventario
+  template:
+    metadata:
+      labels:
+        app: api-inventario
+    spec:
+      containers:
+      - name: api-inventario
+        image: api-inventario:latest
+        ports:
+        - containerPort: 8001
+        env:
+        - name: DB_HOST
+          value: "inventario-db.pocotelpython"
+        - name: DB_USER
+          value: "root"
+        - name: DB_PASSWORD
+          value: "password"
+        - name: DB_DATABASE
+          value: "inventario"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-inventario
+  namespace: pocotelpython
+spec:
+  type: ClusterIP
+  selector:
+    app: api-inventario
+  ports:
+  - protocol: TCP
+    port: 8001
+    targetPort: 8001
+
+---
+# ---------------------------------------------------------------------------
+# DEPLOYMENT: inventario_db
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventario-db
+  namespace: pocotelpython
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventario-db
+  template:
+    metadata:
+      labels:
+        app: inventario-db
+    spec:
+      containers:
+      - name: inventario-db
+        image: inventario-db:latest
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "password"
+        - name: MYSQL_DATABASE
+          value: "inventario"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventario-db
+  namespace: pocotelpython
+spec:
+  type: ClusterIP
+  selector:
+    app: inventario-db
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306

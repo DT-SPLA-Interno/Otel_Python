@@ -1,150 +1,128 @@
-**Guía Completa: Despliegue de Microservicios con Instrumentación Automática (OTEL) y Dynatrace**
--------------------------------------------------------------------------------------------------
+# Guía Completa: Despliegue de Microservicios con Instrumentación Automática (OTEL) y Dynatrace
 
 Esta guía describe los pasos necesarios para construir, desplegar y probar un conjunto de microservicios instrumentados automáticamente con **OpenTelemetry (OTEL)**, así como para configurar y desplegar el **Dynatrace OpenTelemetry Collector** en un clúster de Kubernetes.
 
-### **Índice**
+---
 
-1.  **Construcción de Imágenes Docker**1.1 [Construir las imágenes Docker de los microservicios](#_1.1_Construir_las)1.2 [Subir las imágenes al registro](#_1.2_Subir_las_imágenes)
-    
-2.  **Crear el Secreto en Kubernetes**
-    
-3.  **Desplegar Dynatrace OpenTelemetry Collector**3.1 [Aplicar el YAML de Kubernetes](#_3.1_Aplicar_el)3.2 [Verificar los Recursos en Kubernetes](#_3.2_Verificar_los_Recursos)
-    
-4.  **Desplegar los Microservicios en Kubernetes**4.1 [Aplicar el archivo YAML para los microservicios](#_4.1_Aplicar_el)4.2 [Verificar los Recursos de los Microservicios](#_4.2_Verificar_los_Recursos)
-    
-5.  **Probar la Implementación**5.1 [Acceder a la User Interface](#_5.1_Acceder_a)5.2 [Probar el API de Inventario](#_5.2_Probar_el)
-    
-6.  **Verificar Trazas en Dynatrace**
-    
-7.  **Personalización Opcional**
-    
+## Índice
 
-**1\. Construcción de Imágenes Docker**
----------------------------------------
+1. **Construcción y Publicación de Imágenes Docker**  
+   1.1 [Construir las imágenes Docker](#11-construir-las-imágenes-docker)  
+   1.2 [Etiquetar y subir las imágenes al registro](#12-etiquetar-y-subir-las-imágenes-al-registro)  
 
-### **1.1. Construir las imágenes Docker de los microservicios**
+2. **Desplegar los Microservicios en Kubernetes**  
+   2.1 [Aplicar el YAML de Kubernetes](#21-aplicar-el-yaml-de-kubernetes)  
+   2.2 [Verificar los Recursos en Kubernetes](#22-verificar-los-recursos-en-kubernetes)  
 
-Los microservicios son:
+3. **Desplegar Dynatrace OpenTelemetry Collector**  
+   3.1 [Agregar el repositorio Helm y desplegar el Collector](#31-agregar-el-repositorio-helm-y-desplegar-el-collector)  
+   3.2 [Verificar los Recursos en Kubernetes](#32-verificar-los-recursos-en-kubernetes)  
 
-*   **User Interface**
-    
-*   **API Inventario**
-    
-*   **Base de datos MySQL** (con script de inicialización)
-    
+4. **Probar la Implementación**  
+   4.1 [Acceder a la User Interface](#41-acceder-a-la-user-interface)  
+   4.2 [Probar el API de Inventario](#42-probar-el-api-de-inventario)  
 
-En cada carpeta se encuentra un Dockerfile. Para construir las imágenes usando la etiqueta **otel** (referenciando la instrumentación automática), ejecuta:
+5. **Verificar Trazas en Dynatrace**
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   bashCopyEditdocker build -t otel/user-interface:latest -f user_interface/Dockerfile ./user_interface  docker build -t otel/api-inventario:latest -f api_inventario/Dockerfile ./api_inventario  docker build -t otel/inventario-db:latest -f inventario_db/Dockerfile ./inventario_db   `
+6. **Personalización Opcional**
 
-### **1.2. Subir las imágenes al registro**
+---
 
-Una vez construidas, las imágenes pueden empujarse (push) a tu repositorio Docker (por ejemplo, DockerHub, Amazon ECR, Google Container Registry, etc.):
+## 1. Construcción y Publicación de Imágenes Docker
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   bashCopyEditdocker push otel/user-interface:latest  docker push otel/api-inventario:latest  docker push otel/inventario-db:latest   `
+### 1.1. Construir las imágenes Docker
 
-> **Nota:** Ajusta la referencia de imagen si usas un repositorio privado o especificas una ruta distinta(por ejemplo, myrepo.com/otel/user-interface:latest).
+```bash
+docker build -t otel/user-interface:automatica_otel -f user_interface/Dockerfile ./user_interface
+docker build -t otel/api-inventario:automatica_otel -f api_inventario/Dockerfile ./api_inventario
+docker build -t otel/inventario-db:automatica_otel -f inventario_db/Dockerfile ./inventario_db
+```
 
-**2\. Crear el Secreto en Kubernetes**
---------------------------------------
+### 1.2. Etiquetar y subir las imágenes al registro
 
-Para almacenar la URL de Dynatrace y el token de acceso, crea un secreto en el namespace **dynatrace** (asegúrate de que exista el namespace o créalo si es necesario):
+```bash
+docker tag otel/user-interface:automatica_otel myrepo/otel/user-interface:automatica_otel
+docker tag otel/api-inventario:automatica_otel myrepo/otel/api-inventario:automatica_otel
+docker tag otel/inventario-db:automatica_otel myrepo/otel/inventario-db:automatica_otel
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   bashCopyEditkubectl create secret generic dynatrace-otelcol-dt-api-credentials \    --from-literal=OTEL_EXPORTER_OTLP_ENDPOINT="https://xxxxxxxxxx/api/v2/otlp/v1/traces" \    --from-literal=OTEL_EXPORTER_OTLP_TOKEN="Token_de_Dynatrace_aquí" \    -n dynatrace   `
+docker push myrepo/otel/user-interface:automatica_otel
+docker push myrepo/otel/api-inventario:automatica_otel
+docker push myrepo/otel/inventario-db:automatica_otel
+```
 
-*   Reemplaza OTEL\_EXPORTER\_OTLP\_ENDPOINT y OTEL\_EXPORTER\_OTLP\_TOKEN con tus valores reales.
-    
-*   El secreto almacenará los valores en texto plano (stringData). Kubernetes los convierte internamente a base64.
-    
+---
 
-**3\. Desplegar Dynatrace OpenTelemetry Collector**
----------------------------------------------------
+## 2. Desplegar los Microservicios en Kubernetes
 
-### **3.1. Aplicar el YAML de Kubernetes**
+### 2.1. Aplicar el YAML de Kubernetes
 
-Utiliza el archivo dynatrace-otel-collector.yaml (o como lo hayas nombrado) para desplegar:
+```bash
+kubectl apply -f kubernetes/microservices.yaml
+```
 
-*   El Deployment del Collector
-    
-*   El ConfigMap con la configuración del Collector
-    
-*   El Service en el puerto 4317 (OTLP gRPC) y 4318 (OTLP HTTP)
-    
+### 2.2. Verificar los Recursos en Kubernetes
 
-Ejecuta:
+```bash
+kubectl get pods,svc -n pocotelpython
+```
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   bashCopyEditkubectl apply -f dynatrace-otel-collector.yaml   `
+---
 
-### **3.2. Verificar los Recursos en Kubernetes**
+## 3. Desplegar Dynatrace OpenTelemetry Collector
 
-Observa que el Pod y el Service estén funcionando:
+### 3.1. Agregar el repositorio Helm y desplegar el Collector
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   bashCopyEditkubectl get pods,svc -n dynatrace   `
+```bash
+helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+helm repo update
 
-**Posible resultado**:
+helm upgrade -i dynatrace-collector open-telemetry/opentelemetry-collector \
+  -f values-deployment.yaml -n dynatrace
+```
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   pgsqlCopyEditNAME                                         READY   STATUS    RESTARTS   AGE  pod/dynatrace-collector-xxxxxxxxxx-abcde     1/1     Running   0          30s  NAME                                         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)            AGE  service/dynatrace-collector                  ClusterIP   10.96.0.1                4317/TCP,4318/TCP  30s   `
+### 3.2. Verificar los Recursos en Kubernetes
 
-**4\. Desplegar los Microservicios en Kubernetes**
---------------------------------------------------
+```bash
+kubectl get pods,svc -n dynatrace
+```
 
-### **4.1. Aplicar el archivo YAML para los microservicios**
+---
 
-En el archivo microservices.yaml (o equivalente), tendrás los Deployments y Services de:
+## 4. Probar la Implementación
 
-*   **user\_interface**
-    
-*   **api\_inventario**
-    
-*   **inventario\_db**
-    
+### 4.1. Acceder a la User Interface
 
-Aplica el archivo:
+```bash
+http://<EXTERNAL-IP>:80
+```
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   bashCopyEditkubectl apply -f kubernetes/microservices.yaml   `
+### 4.2. Probar el API de Inventario
 
-### **4.2. Verificar los Recursos de los Microservicios**
+```bash
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -d '{"name": "Laptop", "quantity": 10}' \
+     http://<api-inventario-service>:8001/items/add
+```
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   bashCopyEditkubectl get pods,svc -n pocotelpython   `
+---
 
-**Ejemplo**:
+## 5. Verificar Trazas en Dynatrace
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   pgsqlCopyEditNAME                                         READY   STATUS    RESTARTS   AGE  pod/user-interface-xxxxxx-abcde             1/1     Running   0          30s  pod/api-inventario-xxxxxx-abcde             1/1     Running   0          30s  pod/inventario-db-xxxxxx-abcde              1/1     Running   0          30s  NAME                                         TYPE          CLUSTER-IP   EXTERNAL-IP  PORT(S)      AGE  service/user-interface                       LoadBalancer  10.96.0.5           80:8000/TCP   30s  service/api-inventario                       ClusterIP     10.96.0.6           8001/TCP      30s  service/inventario-db                        ClusterIP     10.96.0.7           3306/TCP      30s   `
+Accede a tu **Dynatrace** e ingresa a la sección de **trazas** o **PurePath**.
 
-**5\. Probar la Implementación**
---------------------------------
+---
 
-### **5.1. Acceder a la User Interface**
+## 6. Personalización Opcional
 
-Si tu Service para user-interface es de tipo LoadBalancer, obtén la IP o DNS asignado y visita en tu navegador:
+Si deseas personalizar el Collector, edita `values-deployment.yaml` y ejecuta:
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   cppCopyEdithttp://:80   `
+```bash
+helm upgrade -i dynatrace-collector open-telemetry/opentelemetry-collector \
+  -f values-deployment.yaml -n dynatrace
+```
 
-El endpoint raíz (/) debe responder con un mensaje de bienvenida. Además, tienes:
+---
 
-*   **/add\_item/** para agregar un ítem al inventario.
-    
-*   **/items/** para listar ítems del inventario.
-    
+¡Con esto has completado el despliegue de los microservicios instrumentados con **OpenTelemetry** y la configuración del **Dynatrace OpenTelemetry Collector**!
 
-### **5.2. Probar el API de Inventario**
-
-*   bashCopyEditcurl -X POST \\ -H "Content-Type: application/json" \\ -d '{"name": "Laptop", "quantity": 10}' \\ http://:8001/items/addDebe responder con un mensaje confirmando la inserción.
-    
-*   bashCopyEditcurl http://:8001/items/allDebe retornar el JSON con la lista de ítems almacenados.
-    
-
-**6\. Verificar Trazas en Dynatrace**
--------------------------------------
-
-Accede a tu **Dynatrace** e ingresa a la sección de **trazas** o **PurePath** (según la interfaz de Dynatrace). Deberías observar las trazas generadas por tus microservicios llegando a través del **Dynatrace OpenTelemetry Collector**.
-
-**7\. Personalización Opcional**
---------------------------------
-
-Si deseas personalizar el Collector (agregar **procesadores**, **otros exportadores**, **filtros**, etc.), edita la sección otel-collector-config.yaml en el ConfigMap. Luego, ejecuta:
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   bashCopyEditkubectl apply -f dynatrace-otel-collector.yaml   `
-
-para que el Collector se recargue con la nueva configuración.

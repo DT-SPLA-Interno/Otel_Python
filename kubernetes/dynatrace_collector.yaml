@@ -1,0 +1,129 @@
+---
+# ---------------------------------------------------------------------------
+# SECRET con stringData en lugar de data
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dynatrace-otelcol-dt-api-credentials
+  namespace: dynatrace
+type: Opaque
+stringData:
+  # Variables "en claro", Kubernetes se encargará de convertirlas a base64 internamente
+  OTEL_EXPORTER_OTLP_ENDPOINT: "https://xxxxxxxxxx/api/v2/otlp/v1/traces"
+  OTEL_EXPORTER_OTLP_TOKEN: "Token_de_Dynatrace_aquí"
+
+---
+# ---------------------------------------------------------------------------
+# DEPLOYMENT DEL DYNATRACE OTEL COLLECTOR
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dynatrace-collector
+  namespace: dynatrace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dynatrace-collector
+  template:
+    metadata:
+      labels:
+        app: dynatrace-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector:latest
+        ports:
+          - containerPort: 4317   # OTLP gRPC
+          - containerPort: 4318   # OTLP HTTP
+        volumeMounts:
+          - name: config
+            mountPath: /etc/otel-collector-config
+        command: ["/otelcol"]
+        args:
+          [
+            "--config",
+            "/etc/otel-collector-config/otel-collector-config.yaml"
+          ]
+        env:
+          # Env vars que inyectamos a partir del Secret
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            valueFrom:
+              secretKeyRef:
+                name: dynatrace-otelcol-dt-api-credentials
+                key: OTEL_EXPORTER_OTLP_ENDPOINT
+          - name: OTEL_EXPORTER_OTLP_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: dynatrace-otelcol-dt-api-credentials
+                key: OTEL_EXPORTER_OTLP_TOKEN
+      volumes:
+      - name: config
+        configMap:
+          name: otel-collector-config
+
+---
+# ---------------------------------------------------------------------------
+# CONFIGMAP con la configuración del OTEL Collector
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: dynatrace
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+
+    exporters:
+      # Exportador hacia Dynatrace mediante OTLP/HTTP
+      otlphttp/dynatrace:
+        endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+        headers:
+          # Usamos 'Api-Token' con el contenido de la variable de entorno
+          Authorization: "Api-Token ${OTEL_EXPORTER_OTLP_TOKEN}"
+
+    processors:
+      batch:
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp/dynatrace]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp/dynatrace]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp/dynatrace]
+
+---
+# ---------------------------------------------------------------------------
+# SERVICE para el Collector
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: dynatrace-collector
+  namespace: dynatrace
+spec:
+  type: ClusterIP
+  selector:
+    app: dynatrace-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318

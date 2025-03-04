@@ -25,6 +25,7 @@ spec:
       containers:
       - name: user-interface
         image: edunzz/otel-user-interface:automatica_otel
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         # Si se desea especificar variables de entorno, se agregan aquí
@@ -68,6 +69,7 @@ spec:
       containers:
       - name: api-inventario
         image: edunzz/otel-api-inventario:automatica_otel
+        imagePullPolicy: Always
         ports:
         - containerPort: 8001
         env:
@@ -116,6 +118,7 @@ spec:
       containers:
       - name: inventario-db
         image: edunzz/otel-inventario-db:automatica_otel
+        imagePullPolicy: Always
         ports:
         - containerPort: 3306
         env:

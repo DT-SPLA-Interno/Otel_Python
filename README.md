@@ -89,34 +89,29 @@ kubectl get pods,svc -n dynatrace
 
 ## 4. Probar la Implementación
 
-### 4.1. Acceder a la User Interface
+### 4.1. Acceder a la User Interface y robar el API de Inventario
 
 ```bash
-http://<EXTERNAL-IP>:80
-```
+curl --location --request GET 'http://<EXTERNAL-IP>'
+# {"message":"Bienvenido al User Interface Microservice"}
 
-### 4.2. Probar el API de Inventario
+```
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"name": "Laptop", "quantity": 10}' http://135.234.211.100:80/add_item
+curl --location --request POST 'http://<EXTERNAL-IP>/add_item?name=batery&quantity=20000'
+# {"message":"Item agregado correctamente","data":{"message":"Item 'batery' agregado con cantidad 20000"}}```
+
 ```
 
+```bash
+curl --location --request GET 'http://<EXTERNAL-IP>/items/'
+# {"items":[{"id":1,"name":"Laptop","quantity":10},{"id":2,"name":"Mouse","quantity":50},{"id":3,"name":"Teclado","quantity":30},{"id":4,"name":"arduino","quantity":40}, .......
+```
 ---
 
 ## 5. Verificar Trazas en Dynatrace
 
 Accede a tu **Dynatrace** e ingresa a la sección de **trazas** o **PurePath**.
-
----
-
-## 6. Personalización Opcional
-
-Si deseas personalizar el Collector, edita `values-deployment.yaml` y ejecuta:
-
-```bash
-helm upgrade -i dynatrace-collector open-telemetry/opentelemetry-collector \
-  -f values-deployment.yaml -n dynatrace
-```
 
 ---
 

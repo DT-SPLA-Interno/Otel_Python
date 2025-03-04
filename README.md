@@ -98,10 +98,7 @@ http://<EXTERNAL-IP>:80
 ### 4.2. Probar el API de Inventario
 
 ```bash
-curl -X POST \
-     -H "Content-Type: application/json" \
-     -d '{"name": "Laptop", "quantity": 10}' \
-     http://<api-inventario-service>:8001/items/add
+curl -X POST -H "Content-Type: application/json" -d '{"name": "Laptop", "quantity": 10}' http://135.234.211.100:80/add_item
 ```
 
 ---

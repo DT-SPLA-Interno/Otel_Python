@@ -99,7 +99,7 @@ curl --location --request GET 'http://<EXTERNAL-IP>'
 
 ```bash
 curl --location --request POST 'http://<EXTERNAL-IP>/add_item?name=batery&quantity=20000'
-# {"message":"Item agregado correctamente","data":{"message":"Item 'batery' agregado con cantidad 20000"}}```
+# {"message":"Item agregado correctamente","data":{"message":"Item 'batery' agregado con cantidad 20000"}}
 
 ```
 

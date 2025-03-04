@@ -71,13 +71,12 @@ kubectl get pods,svc -n pocotelpython
 ## 3. Desplegar Dynatrace OpenTelemetry Collector
 
 ### 3.1. Agregar el repositorio Helm y desplegar el Collector
+antes de aplicar el deploy modificar el kubernetes/dynatrace_collector.yaml modificar:
+- linea 13: [URL](https://docs.dynatrace.com/docs/shortlink/otel-getstarted-otlpexport#export-to-saas-and-activegate)
+- linea 14: [Token](https://docs.dynatrace.com/docs/shortlink/otel-getstarted-otlpexport#authentication-export-to-activegate)
 
 ```bash
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-helm repo update
-
-helm upgrade -i dynatrace-collector open-telemetry/opentelemetry-collector \
-  -f values-deployment.yaml -n dynatrace
+kubectl apply -f dynatrace_collector.yaml
 ```
 
 ### 3.2. Verificar los Recursos en Kubernetes

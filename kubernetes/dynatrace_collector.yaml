@@ -33,39 +33,40 @@ spec:
         app: dynatrace-collector
     spec:
       containers:
-      - name: otel-collector
-        image: "ghcr.io/dynatrace/dynatrace-otel-collector/dynatrace-otel-collector:0.23.0"
-        resources:
-          limits:
-            memory: 512Mi
-        ports:
-          - containerPort: 4317   # OTLP gRPC
-          - containerPort: 4318   # OTLP HTTP
-        volumeMounts:
-          - name: config
-            mountPath: /etc/otel-collector-config
-        command: ["/otelcol"]
-        args:
-          [
-            "--config",
-            "/etc/otel-collector-config/otel-collector-config.yaml"
-          ]
-        env:
-          # Env vars que inyectamos a partir del Secret
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            valueFrom:
-              secretKeyRef:
-                name: dynatrace-otelcol-dt-api-credentials
-                key: OTEL_EXPORTER_OTLP_ENDPOINT
-          - name: OTEL_EXPORTER_OTLP_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: dynatrace-otelcol-dt-api-credentials
-                key: OTEL_EXPORTER_OTLP_TOKEN
+        - name: otel-collector
+          image: "ghcr.io/dynatrace/dynatrace-otel-collector/dynatrace-otel-collector:0.23.0"
+          resources:
+            limits:
+              memory: 512Mi
+          ports:
+            - containerPort: 4317   # OTLP gRPC
+            - containerPort: 4318   # OTLP HTTP
+
+          # Montamos la ConfigMap con el archivo de configuración
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel-collector-config
+
+          # Usamos 'args' para pasar la configuración al ENTRYPOINT (NO sobrescribas 'command')
+          args:
+            - "--config=/etc/otel-collector-config/otel-collector-config.yaml"
+
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: dynatrace-otelcol-dt-api-credentials
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
+            - name: OTEL_EXPORTER_OTLP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: dynatrace-otelcol-dt-api-credentials
+                  key: OTEL_EXPORTER_OTLP_TOKEN
+
       volumes:
-      - name: config
-        configMap:
-          name: otel-collector-config
+        - name: config
+          configMap:
+            name: otel-collector-config
 
 ---
 # ---------------------------------------------------------------------------
@@ -85,11 +86,9 @@ data:
           http:
 
     exporters:
-      # Exportador hacia Dynatrace mediante OTLP/HTTP
       otlphttp/dynatrace:
         endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
         headers:
-          # Usamos 'Api-Token' con el contenido de la variable de entorno
           Authorization: "Api-Token ${OTEL_EXPORTER_OTLP_TOKEN}"
 
     processors:
@@ -128,5 +127,7 @@ spec:
       port: 4317
       targetPort: 4317
     - name: otlp-http
+      port: 4318
+      targetPort: 4318
       port: 4318
       targetPort: 4318

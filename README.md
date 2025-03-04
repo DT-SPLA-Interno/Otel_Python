@@ -33,21 +33,21 @@ Esta guía describe los pasos necesarios para construir, desplegar y probar un c
 ### 1.1. Construir las imágenes Docker
 
 ```bash
-docker build -t otel/user-interface:automatica_otel -f user_interface/Dockerfile ./user_interface
-docker build -t otel/api-inventario:automatica_otel -f api_inventario/Dockerfile ./api_inventario
-docker build -t otel/inventario-db:automatica_otel -f inventario_db/Dockerfile ./inventario_db
+docker build -t otel-user-interface:automatica_otel -f user_interface/Dockerfile ./user_interface
+docker build -t otel-api-inventario:automatica_otel -f api_inventario/Dockerfile ./api_inventario
+docker build -t otel-inventario-db:automatica_otel -f inventario_db/Dockerfile ./inventario_db
 ```
 
 ### 1.2. Etiquetar y subir las imágenes al registro
 
 ```bash
-docker tag otel/user-interface:automatica_otel myrepo/otel/user-interface:automatica_otel
-docker tag otel/api-inventario:automatica_otel myrepo/otel/api-inventario:automatica_otel
-docker tag otel/inventario-db:automatica_otel myrepo/otel/inventario-db:automatica_otel
+docker tag otel-user-interface:automatica_otel myrepo/otel-user-interface:automatica_otel
+docker tag otel-api-inventario:automatica_otel myrepo/otel-api-inventario:automatica_otel
+docker tag otel-inventario-db:automatica_otel myrepo/otel-inventario-db:automatica_otel
 
-docker push myrepo/otel/user-interface:automatica_otel
-docker push myrepo/otel/api-inventario:automatica_otel
-docker push myrepo/otel/inventario-db:automatica_otel
+docker push myrepo/otel-user-interface:automatica_otel
+docker push myrepo/otel-api-inventario:automatica_otel
+docker push myrepo/otel-inventario-db:automatica_otel
 ```
 
 ---

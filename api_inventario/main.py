@@ -41,8 +41,7 @@ tracer_provider = TracerProvider(resource=resource)
 set_tracer_provider(tracer_provider)
 
 otlp_exporter = OTLPSpanExporter(
-    # Reemplaza "dynatrace-collector.dynatrace:4318" con la ruta/host real de tu Collector
-    endpoint="http://dynatrace-collector.dynatrace:4318/v1/traces"
+    endpoint="http://dynatrace-collector-opentelemetry-collector.dynatrace.svc.cluster.local:4318/v1/traces"
 )
 
 span_processor = BatchSpanProcessor(otlp_exporter)

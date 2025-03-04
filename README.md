@@ -76,7 +76,7 @@ antes de aplicar el deploy modificar el kubernetes/dynatrace_collector.yaml modi
 - linea 14: [Token](https://docs.dynatrace.com/docs/shortlink/otel-getstarted-otlpexport#authentication-export-to-activegate)
 
 ```bash
-kubectl apply -f dynatrace_collector.yaml
+kubectl apply -f kubernetes/dynatrace_collector.yaml
 ```
 
 ### 3.2. Verificar los Recursos en Kubernetes

@@ -76,7 +76,10 @@ antes de aplicar el deploy modificar el kubernetes/dynatrace_collector.yaml modi
 - linea 14: [Token](https://docs.dynatrace.com/docs/shortlink/otel-getstarted-otlpexport#authentication-export-to-activegate)
 
 ```bash
-kubectl apply -f kubernetes/dynatrace_collector.yaml
+kubectl create secret generic dynatrace-otelcol-dt-api-credentials --from-literal=DT_ENDPOINT=https://xxxx.com/api/v2/otlp --from-literal=DT_API_TOKEN=TOKEN -n dynatarce
+helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+helm repo update
+helm upgrade -i dynatrace-collector open-telemetry/opentelemetry-collector -f kubernetes/values-deployment.yaml -n dynatrace
 ```
 
 ### 3.2. Verificar los Recursos en Kubernetes

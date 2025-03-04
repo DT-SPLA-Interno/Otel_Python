@@ -34,7 +34,10 @@ spec:
     spec:
       containers:
       - name: otel-collector
-        image: otel/opentelemetry-collector:latest
+        image: "ghcr.io/dynatrace/dynatrace-otel-collector/dynatrace-otel-collector:0.23.0"
+        resources:
+          limits:
+            memory: 512Mi
         ports:
           - containerPort: 4317   # OTLP gRPC
           - containerPort: 4318   # OTLP HTTP

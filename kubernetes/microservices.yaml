@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: user-interface
-        image: user-interface:latest
+        image: edunzz/otel-user-interface:automatica_otel
         ports:
         - containerPort: 8000
         # Si se desea especificar variables de entorno, se agregan aquí
@@ -67,7 +67,7 @@ spec:
     spec:
       containers:
       - name: api-inventario
-        image: api-inventario:latest
+        image: edunzz/otel-api-inventario:automatica_otel
         ports:
         - containerPort: 8001
         env:
@@ -115,7 +115,7 @@ spec:
     spec:
       containers:
       - name: inventario-db
-        image: inventario-db:latest
+        image: edunzz/otel-inventario-db:automatica_otel
         ports:
         - containerPort: 3306
         env:

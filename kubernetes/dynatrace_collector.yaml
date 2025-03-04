@@ -129,5 +129,3 @@ spec:
     - name: otlp-http
       port: 4318
       targetPort: 4318
-      port: 4318
-      targetPort: 4318
